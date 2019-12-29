@@ -9,6 +9,8 @@ TrainModel <- function(trainX, trainY, testX, column, SL = 0.05){
 }
 
 # In[0] 讀入資料:
+## need to fix the path to relative path....
+## R is quite annoying to do so. Alt least I haven't found the answer yet.
 files = c("C:/Users/dppss/OneDrive/E3/FinalProject/BTC.xlsx",
             "C:/Users/dppss/OneDrive/E3/FinalProject/Gold.xlsx",
             "C:/Users/dppss/OneDrive/E3/FinalProject/LTC.xlsx",
