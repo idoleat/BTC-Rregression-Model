@@ -6,10 +6,10 @@ from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 
 def EvalueModel(model, scalerOfy, testX, testy, column, i = ''):
-    
+
     close_pred = scalerOfy.inverse_transform(model.predict(testX))
     close_test = scalerOfy.inverse_transform(testy)
-    
+
     # 畫圖比較Pred 與 Test。
     f = plt.figure()
     x = np.linspace(close_pred.min(), close_pred.max(), 2)
@@ -21,7 +21,7 @@ def EvalueModel(model, scalerOfy, testX, testy, column, i = ''):
     plt.legend(['y = x', 'Test-Pred'])
     plt.show()
     plt.close(f)
-    
+
     # 繪製殘差圖。
     residual = close_test-close_pred
     f = plt.figure()
@@ -33,9 +33,9 @@ def EvalueModel(model, scalerOfy, testX, testy, column, i = ''):
     plt.close(f)
 
 def TrainModel(trainX, trainy, testX, column, SL = 0.05):
-    
+
     column = column.copy()
-    trainX = np.append(np.ones([len(trainX), 1]), trainX, 1) 
+    trainX = np.append(np.ones([len(trainX), 1]), trainX, 1)
     testX = np.append(np.ones([len(testX), 1]), testX, 1)
     column = ['const']+column
     for i in range(trainX.shape[1]):
@@ -45,7 +45,7 @@ def TrainModel(trainX, trainy, testX, column, SL = 0.05):
             print('*'*100)
             print('Start:')
             print(regressor.summary())
-        
+
         p = list(regressor.pvalues)
         maxP = max(p)
         if maxP > SL:
@@ -55,18 +55,18 @@ def TrainModel(trainX, trainy, testX, column, SL = 0.05):
             column.pop(maxIndex)
         else:
             break
-    
+
     print('\n\n')
     print('Final:')
     print(regressor.summary())
-    
+
     return regressor, trainX, testX, column
 
 # In[0] 讀入資料:
 files = ['BTC.xlsx', 'Gold.xlsx', 'LTC.xlsx', 'NDX100.xlsx', 'Oil.xlsx']
 df = pd.read_excel(files[0], 0)
 for f in files[1:]:
-    df = pd.merge(df, pd.read_excel(f, 0), 
+    df = pd.merge(df, pd.read_excel(f, 0),
                   on = 'Date', how = 'inner').set_index('Date')
 
 del files, f
@@ -88,10 +88,10 @@ for i in df.columns[:-1]:
 
 # 最後發現Close LTC, Gold Value USD與Adj Close NDX與Close BTC線性關係較顯著。
 
-# In[2] 去除Outliers(平均值左右3個標準差外者視為Outlier):
+# In[2] 去除Outliers:
 uplim = np.percentile(df, 99.85, axis = 0)
 downlim = np.percentile(df, 0.15, axis = 0)
-logicDf = np.logical_or(df < downlim, df > uplim) 
+logicDf = np.logical_or(df < downlim, df > uplim)
 
 isTrim = logicDf.iloc[:, 0]
 for i in range(1, logicDf.shape[1]):
@@ -121,7 +121,3 @@ regressor, X_train, X_test, columns_i = TrainModel(X_train, y_train, X_test, col
 
 # In[5] 驗證多元線性迴歸模型:
 EvalueModel(regressor, scalerY, X_test, y_test, columns_i)
-
-
-
-
