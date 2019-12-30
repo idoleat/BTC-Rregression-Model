@@ -1,4 +1,4 @@
-library(crate)
+library(caret)
 library(xlsx)
 EvalueModel <- function(model, scalerOfy, testX, testy, column, i = ''){
 
@@ -6,6 +6,16 @@ EvalueModel <- function(model, scalerOfy, testX, testy, column, i = ''){
 
 TrainModel <- function(trainX, trainY, testX, column, SL = 0.05){
 
+}
+
+Standardize <- function(X, mean, sd){
+    value = (X-mean)/sd
+    eval.parent(substitute(X <- value))
+}
+
+InvertStandardize <- function(X, mean, sd){
+    value = X*sd+mean
+    eval.parent(substitute(X <- value))
 }
 
 # In[0] Read data:
@@ -27,6 +37,32 @@ for(f in files[2:length(files)]){
 # Plot scatter figue of each indicator versus Close BTC.
 ColumnCount = ncol(df)
 par(mfrow = c(ColumnCount/3,3), mai =  c(0.3, 0.3, 0.3, 0.3), cex = 0.6)
+## why setting fugure in R is so unintuitive?
 for(i in 3:ColumnCount){
     plot(x = df[,2], y = df[,i], main = names(df)[i])
 }
+# We found that Close LTC, Gold value USD and Adj Close NDX is somehow linear with Close BTC
+
+# In[2] Get rid of outliers
+## Why? Our data aren't normally distributed....
+
+# In[3] Pre-process data
+CloseBTC_stat = List("Mean" = mean(df[,2]), "SD" = sd(df[,2]))
+for(i in 2:ColumnCount){
+    Standardize(df[,i], mean(df[,i]), sd(df[,i]))
+}
+Indicators = df[,c(4,5,7,9)] #'Open LTC', 'Open NDX', 'Gold Value USD', 'Oil Value USD'
+CloseBTC = df[,2]
+columns = c("Open LTC", "Open NDX", "Gold Value USD", "Oil Value USD")
+# trainIndex = createDataPartition(Indicators, p = 0.8, list = FALSE)
+## Error: attempt to make a table with >= 2^31 elements
+trainIndex = createDataPartition(CloseBTC, p = 0.8, list = FALSE) #temp
+X_train = Indicators[trainIndex, ]
+X_test = Indicators[-trainIndex, ]
+# trainIndex = createDataPartition(CloseBTC, p = 0.8, list = FALSE)
+y_train = CloseBTC[trainIndex]
+y_test = CloseBTC[-trainIndex]
+
+# In[4] Establish mulyople dollar regression model.
+TrainResult = TrainModel(X_train, y_train, X_test, columns)
+EvalueModel(TrainResult$regressor, CloseBTC_stat, TrainResult$X_test, y_test, TrainResult$columns_i)
