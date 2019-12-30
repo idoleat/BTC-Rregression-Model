@@ -106,7 +106,7 @@ del uplim, downlim, logicDf, isTrim
 
 # In[3] 資料預處理:
 scalerX = StandardScaler()
-scalerY = StandardScaler()
+scalerY = StandardScaler() #scaler of Close BTC. Will be used later.
 dfs = pd.DataFrame(np.hstack([scalerX.fit_transform(df.iloc[:, :-1]),
                               scalerY.fit_transform(df.iloc[:, -1:])]),
                               columns = df.columns)
