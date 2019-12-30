@@ -62,13 +62,14 @@ CloseBTC = df[,2]
 columns = c("Open LTC", "Open NDX", "Gold Value USD", "Oil Value USD")
 # trainIndex = createDataPartition(Indicators, p = 0.8, list = FALSE)
 ## Error: attempt to make a table with >= 2^31 elements
-trainIndex = createDataPartition(CloseBTC, p = 0.8, list = FALSE) #temp
-X_train = Indicators[trainIndex, ]
-X_test = Indicators[-trainIndex, ]
+trainIndex = createDataPartition(CloseBTC, p = 0.8, list = FALSE) #temp...? Nah...
+# Why Python version create x and y data splits seperatly? x should match with y
+Indicators_train = Indicators[trainIndex, ]
+Indicators_test = Indicators[-trainIndex, ]
 # trainIndex = createDataPartition(CloseBTC, p = 0.8, list = FALSE)
-y_train = CloseBTC[trainIndex]
-y_test = CloseBTC[-trainIndex]
+CloseBTC_train = CloseBTC[trainIndex]
+CloseBTC_test = CloseBTC[-trainIndex]
 
 # In[4] Establish mulyople dollar regression model.
-TrainResult = TrainModel(X_train, y_train, X_test, columns)
-EvalueModel(TrainResult$regressor, CloseBTC_stat, TrainResult$X_test, y_test, TrainResult$columns_i)
+TrainResult = TrainModel(Indicators_train, CloseBTC_train, Indicators_test, columns)
+EvalueModel(TrainResult$regressor, CloseBTC_stat, TrainResult$Indicators_test, CloseBTC_test, TrainResult$columns_i)
