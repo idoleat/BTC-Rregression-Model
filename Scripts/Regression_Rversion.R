@@ -1,12 +1,63 @@
 library(caret)
 library(xlsx)
 library(DescTools)
-EvalueModel <- function(model, scalerOfy, testX, testy, column, i = ''){
-
-}
 
 TrainModel <- function(trainX, trainY, testX, column, SL = 0.05){
+    pValues = c()
+    trainX["const"] = 1
+    testX["const"] = 1 # Breifer than python
+    column = c(column, "const") # R vector can not be appended. Assign a new one.
+    for(i in 1:ncol(trainX)){
+        for(j in 1:ncol(trainX)){
+            regressor = lm(trainY ~ trainX[,j])
+            pValues[j] = ExtractPValue(regressor)
+        }
+        if(i == 1){
+            "============="
+            "Start:"
+            summary(regressor)
+        }
+        MaxP = max(pValues)
+        if( MaxP > SL){
+            MaxIndex = match(MaxP, pValues)
+            trainX[,MaxIndex] = NULL
+            testX[,MaxIndex] = NULL
+            pValue = c(pValue[1:MaxIndex-1], pValue[MaxIndex+1:length(pValue)])
+        }
+        else break;
+    }
+    print("============")
+    print("Final:")
+    print(summary(regressor))
 
+    return (list(regressor, trainX, testX, column))
+}
+
+ExtractPValue <- function(model){
+    # https://stackoverflow.com/questions/5587676/pull-out-p-values-and-r-squared-from-a-linear-regression
+    f <- summary(model)$fstatistic
+    p <- pf(f[1],f[2],f[3],lower.tail=F)
+    attributes(p) <- NULL
+    return(p)
+}
+
+EvalueModel <- function(model, scalerOfy, testX, testy, column, i = ''){
+    close_pred = InvertStandardize(predict(regressor,testX[,j]), scalerOfy$CloseBTC_mean, scalerOfy$CloseBTC_sd)
+    close_test = InvertStandardize(testy ,scalerOfy$CloseBTC_mean, scalerOfy$CloseBTC_sd)
+
+    #Plot Pred vs Test
+    par(mfrow = c(ColumnCount/3,3), mai =  c(0.3, 0.3, 0.3, 0.3), cex = 0.6)
+    plot(x = close_test, y = close_pred,
+        main = "Test vs Pred (using Gold Value USD, Open LTC, Open NDX, Oil Value USD",
+        xlab = "Close BTC Prediction",
+        ylab = "Close BTC Test"
+    )
+    line()
+    legend()
+
+    #Plot residual graph
+    residual = close_test-close_pred
+    plot(close_test, residual, xlab = "Close BTC Test", ylab = "Resodual", main = "REsidual Plot")
 }
 
 Standardize <- function(X, mean, sd){
@@ -57,9 +108,9 @@ CloseBTC_stat = list("Mean" = mean(df[,2]), "SD" = sd(df[,2]))
 for(i in 2:ColumnCount){
     Standardize(df[,i], mean(df[,i]), sd(df[,i]))
 }
-Indicators = df[,c(4,5,7,9)] #'Open LTC', 'Open NDX', 'Gold Value USD', 'Oil Value USD'
+Indicators = df[,c(4,5,7,9)] #"Gold Value USD", "Open LTC", "Open NDX", "Oil Value USD"
 CloseBTC = df[,2]
-columns = c("Open LTC", "Open NDX", "Gold Value USD", "Oil Value USD")
+columns = c("Gold Value USD", "Open LTC", "Open NDX", "Oil Value USD") #sequence here matters?
 # trainIndex = createDataPartition(Indicators, p = 0.8, list = FALSE)
 ## Error: attempt to make a table with >= 2^31 elements
 trainIndex = createDataPartition(CloseBTC, p = 0.8, list = FALSE) #temp...? Nah...
@@ -72,4 +123,4 @@ CloseBTC_test = CloseBTC[-trainIndex]
 
 # In[4] Establish mulyople dollar regression model.
 TrainResult = TrainModel(Indicators_train, CloseBTC_train, Indicators_test, columns)
-EvalueModel(TrainResult$regressor, CloseBTC_stat, TrainResult$Indicators_test, CloseBTC_test, TrainResult$columns_i)
+EvalueModel(TrainResult$regressor, CloseBTC_stat, TrainResult$trainX, CloseBTC_test, TrainResult$column)
