@@ -1,22 +1,23 @@
 library(caret)
 library(xlsx)
 library(DescTools)
+library(NLP)
 
 TrainModel <- function(trainX, trainY, testX, column, SL = 0.05){
     pValues = c()
     trainX["const"] = 1
     testX["const"] = 1 # Breifer than python
-    column = c(column, "const") # R vector can not be appended. Assign a new one.
+    column[length(column) + 1] = "const"
     for(i in 1:ncol(trainX)){
-        for(j in 1:ncol(trainX)){
-            regressor = lm(trainY ~ trainX[,j])
-            pValues[j] = ExtractPValue(regressor)
-        }
+        regressor = lm(trainY ~ trainX[,1] + trainX[,2] + trainX[,3] + trainX[,4] + trainX[,5]) # hardcode 5 column here for convenience.
+        pValues = ExtractPValue(regressor)
+
         if(i == 1){
             "============="
             "Start:"
             summary(regressor)
         }
+
         MaxP = max(pValues)
         if( MaxP > SL){
             MaxIndex = match(MaxP, pValues)
@@ -30,7 +31,7 @@ TrainModel <- function(trainX, trainY, testX, column, SL = 0.05){
     print("Final:")
     print(summary(regressor))
 
-    return (list(regressor, trainX, testX, column))
+    return (list("regressor" = regressor, "trainX" = trainX, "testX" = testX, "column" = column))
 }
 
 ExtractPValue <- function(model){
@@ -42,22 +43,29 @@ ExtractPValue <- function(model){
 }
 
 EvalueModel <- function(model, scalerOfy, testX, testy, column, i = ''){
-    close_pred = InvertStandardize(predict(regressor,testX[,j]), scalerOfy$CloseBTC_mean, scalerOfy$CloseBTC_sd)
-    close_test = InvertStandardize(testy ,scalerOfy$CloseBTC_mean, scalerOfy$CloseBTC_sd)
-
+    # R's prediction isn't like Python's. It needs the same size of training data and predicting data... :(
+    close_pred = predict(model,testX)
+    # temp solution: randomly select 256(yes, I'm lazy. I hard code.) data.
+    close_predd = c()
+    smp = sample(1:1039, 256)
+    for( i in 1:256){
+        close_predd[i] = as.numeric(pre[[1]][String(smp[i])])
+    }
+    
+    close_predd = InvertStandardize(close_predd, scalerOfy$Mean, scalerOfy$SD)
+    close_test = InvertStandardize(testy ,scalerOfy$Mean, scalerOfy$SD)
     #Plot Pred vs Test
-    par(mfrow = c(ColumnCount/3,3), mai =  c(0.3, 0.3, 0.3, 0.3), cex = 0.6)
-    plot(x = close_test, y = close_pred,
-        main = "Test vs Pred (using Gold Value USD, Open LTC, Open NDX, Oil Value USD",
+    par(mfrow = c(1,1), mai =  c(0.8,0.8, 0.8, 0.8), cex = 0.8)
+    plot(x = close_test, y = close_predd,
+        main = "Test vs Prediction \n Using Open TLC, Open NDX, Gold Value(USD), Oil Value(USD)",
         xlab = "Close BTC Prediction",
-        ylab = "Close BTC Test"
+        ylab = "Close BTC Test",
+        pch = 16
     )
-    line()
-    legend()
 
     #Plot residual graph
-    residual = close_test-close_pred
-    plot(close_test, residual, xlab = "Close BTC Test", ylab = "Resodual", main = "REsidual Plot")
+    #residual = close_test-close_pred
+    #plot(close_test, residual, xlab = "Close BTC Test", ylab = "Resodual", main = "REsidual Plot")
 }
 
 Standardize <- function(X, mean, sd){
@@ -66,8 +74,8 @@ Standardize <- function(X, mean, sd){
 }
 
 InvertStandardize <- function(X, mean, sd){
-    value = X*sd+mean
-    eval.parent(substitute(X <- value))
+    value = X*sd + mean
+    return(value)
 }
 
 # In[0] Read data:
@@ -123,4 +131,4 @@ CloseBTC_test = CloseBTC[-trainIndex]
 
 # In[4] Establish mulyople dollar regression model.
 TrainResult = TrainModel(Indicators_train, CloseBTC_train, Indicators_test, columns)
-EvalueModel(TrainResult$regressor, CloseBTC_stat, TrainResult$trainX, CloseBTC_test, TrainResult$column)
+EvalueModel(TrainResult$regressor, CloseBTC_stat, TrainResult$testX, CloseBTC_test, TrainResult$column)
